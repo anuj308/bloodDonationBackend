@@ -284,14 +284,36 @@ const Center = mongoose.model('Center', centerSchema);
 
 // Create discriminators for specific center types
 const DonationCamp = Center.discriminator('DonationCamp', new mongoose.Schema({
-  campaignName: String,
-  targetDonations: Number,
-  eventPartners: [{
-    name: String,
-    type: String, // Corporate, Educational, Government
-    contributionType: String
-  }],
-  registrationDeadline: Date
+  campaignName: {
+    type: String,
+    required: true
+  },
+  targetDonations: {
+    type: Number,
+    required: true
+  },
+  eventPartners: {
+    type: [{
+      name: {
+        type: String,
+        required: true
+      },
+      type: {
+        type: String,
+        required: true,
+        enum: ['Healthcare', 'Corporate', 'Educational', 'Government', 'NGO', 'Other']
+      },
+      contributionType: {
+        type: String,
+        required: true
+      }
+    }],
+    default: []
+  },
+  registrationDeadline: {
+    type: Date,
+    required: true
+  }
 }));
 
 const BloodBank = Center.discriminator('BloodBank', new mongoose.Schema({

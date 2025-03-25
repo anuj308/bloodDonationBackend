@@ -23,6 +23,7 @@ import hospitalRouter from "./routes/hospital.routes.js";
 import adminRouter from "./routes/admin.routes.js";
 import bloodRouter from "./routes/blood.routes.js";
 import bloodRequestRouter from "./routes/bloodRequest.routes.js";
+import centerRouter from "./routes/center.routes.js";
 
 // routes declaration
 app.use("/api/v1/user", userRouter);
@@ -31,5 +32,6 @@ app.use("/api/v1/hospital", hospitalRouter);
 app.use("/api/v1/admin", adminRouter);
 app.use("/api/v1/blood", bloodRouter);
 app.use("/api/v1/blood-request", bloodRequestRouter);
+app.use("/api/v1/center", centerRouter);
 
 export { app };

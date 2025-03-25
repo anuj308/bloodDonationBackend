@@ -40,7 +40,7 @@ const ngoSchema = new mongoose.Schema({
     position: String
   },
   address: {
-    street: String,
+    street: Object,
     city: {
       type: String,
       required: true

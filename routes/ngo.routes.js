@@ -4,6 +4,7 @@ import {
   registerNGO,
   verifyNGOEmail,
   // requestNewOTP,
+  resendVerificationOtp,
   loginNGO,
   logoutNGO,
   refreshAccessToken,
@@ -21,6 +22,7 @@ const router = Router();
 // Public routes
 router.post('/register', upload.fields([{ name: 'logo', maxCount: 1 }]), registerNGO);
 router.post('/verify-email', verifyNGOEmail);
+router.post('/resend-otp', resendVerificationOtp);
 // router.post('/request-otp', requestNewOTP);
 router.post('/login', loginNGO);
 router.post('/refresh-token', refreshAccessToken);
@@ -30,8 +32,8 @@ router.use(verifyJWT); // Apply verifyJWT middleware to all routes below
 
 router.get('/logout', logoutNGO);
 router.get('/profile', getNGOProfile);
-router.patch('/profile', upload.fields([{ name: 'logo', maxCount: 1 }]), updateNGOProfile);
-router.post('/blood-inventory', updateBloodInventory);
+router.post('/update-profile', upload.fields([{ name: 'logo', maxCount: 1 }]), updateNGOProfile);
+router.post('/update-blood-inventory', updateBloodInventory);
 router.get('/connected-hospitals', getConnectedHospitals);
 router.post('/connection-response', respondToConnectionRequest);
 router.post('/change-password', changePassword);

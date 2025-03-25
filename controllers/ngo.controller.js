@@ -18,7 +18,8 @@ const generateTokens = async (ngoId) => {
       {
         _id: ngo._id,
         name: ngo.name,
-        email: ngo.email
+        email: ngo.email,
+        role: "ngo"
       },
       process.env.ACCESS_TOKEN_SECRET,
       { expiresIn: process.env.ACCESS_TOKEN_EXPIRY }
@@ -196,7 +197,7 @@ const verifyNGOEmail = asyncHandler(async (req, res) => {
 /**
  * Resend verification email
  */
-const resendVerificationEmail = asyncHandler(async (req, res) => {
+const resendVerificationOtp = asyncHandler(async (req, res) => {
   const { email } = req.body;
 
   if (!email) {
@@ -396,24 +397,29 @@ const updateNGOProfile = asyncHandler(async (req, res) => {
     facilities
   } = req.body;
   
-  // Upload logo if provided
-  let logoUrl;
-  if (req.files && req.files.logo) {
-    const logoFile = await uploadOnCloudinary(req.files.logo[0].path);
-    if (logoFile) {
-      logoUrl = logoFile.url;
-    }
-  }
+  // // Upload logo if provided
+  // let logoUrl;
+  // if (req.files && req.files.logo) {
+  //   const logoFile = await uploadOnCloudinary(req.files.logo[0].path);
+  //   if (logoFile) {
+  //     logoUrl = logoFile.url;
+  //   }
+  // }
   
   // Update fields
   const updateFields = {};
   if (name) updateFields.name = name;
   if (contactPerson) updateFields.contactPerson = contactPerson;
-  if (address) updateFields.address = address;
+  if (address && typeof address === 'object') {
+    updateFields.address = {
+      ...ngo.address, // Retain existing address fields
+      ...address     // Overwrite with new fields from the request
+    };
+  }
   if (affiliation) updateFields.affiliation = affiliation;
   if (regNumber) updateFields.regNumber = regNumber;
   if (facilities) updateFields.facilities = facilities;
-  if (logoUrl) updateFields.logo = logoUrl;
+  // if (logoUrl) updateFields.logo = logoUrl;
   
   // Find and update NGO
   const ngo = await NGO.findByIdAndUpdate(
@@ -490,9 +496,7 @@ const getConnectedHospitals = asyncHandler(async (req, res) => {
   );
 });
 
-/**
- * Respond to hospital connection request
- */
+
 const respondToConnectionRequest = asyncHandler(async (req, res) => {
   const { hospitalId, status } = req.body;
   
@@ -543,9 +547,6 @@ const respondToConnectionRequest = asyncHandler(async (req, res) => {
   );
 });
 
-/**
- * Change password
- */
 const changePassword = asyncHandler(async (req, res) => {
   const { currentPassword, newPassword } = req.body;
   
@@ -584,7 +585,7 @@ const changePassword = asyncHandler(async (req, res) => {
 export {
   registerNGO,
   verifyNGOEmail,
-  resendVerificationEmail,
+  resendVerificationOtp,
   loginNGO,
   logoutNGO,
   refreshAccessToken,

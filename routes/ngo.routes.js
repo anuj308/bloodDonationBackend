@@ -3,7 +3,7 @@ import { upload } from '../middleware/multer.middleware.js';
 import {
   registerNGO,
   verifyNGOEmail,
-  requestNewOTP,
+  // requestNewOTP,
   loginNGO,
   logoutNGO,
   refreshAccessToken,
@@ -21,7 +21,7 @@ const router = Router();
 // Public routes
 router.post('/register', upload.fields([{ name: 'logo', maxCount: 1 }]), registerNGO);
 router.post('/verify-email', verifyNGOEmail);
-router.post('/request-otp', requestNewOTP);
+// router.post('/request-otp', requestNewOTP);
 router.post('/login', loginNGO);
 router.post('/refresh-token', refreshAccessToken);
 

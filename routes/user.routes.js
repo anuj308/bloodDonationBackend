@@ -11,6 +11,8 @@ import {
   resendEmailOTP,
   getUserBloodDonationHistory,
   getUserBloodDonationStats,
+  updateBloodType,
+  updateMedicalHistory
 } from "../controllers/user.controller.js";
 import { upload } from "../middleware/multer.middleware.js";
 import { verifyJWT } from "../middleware/auth.middleware.js";
@@ -32,6 +34,8 @@ router.get("/current-user", getCurrentUser);
 router.post("/change-password", changeCurrentPassword);
 router.patch("/update-account", updateAccountDetails);
 router.route("/register").post(registerUser);
+router.route("/update-blood-type").post(updateBloodType);
+router.route("/update-medical-history").post(updateMedicalHistory);
 router.get("/blood-donation-history", getUserBloodDonationHistory);
 router.get("/blood-donation-stats", getUserBloodDonationStats);
 

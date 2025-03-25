@@ -49,6 +49,17 @@ const userSchema = new Schema(
     refreshToken: {
       type: String,
     },
+    bloodType: {
+      type: String,
+      enum: ["A+", "A-", "B+", "B-", "AB+", "AB-", "O+", "O-"],
+      required: false,
+      trim: true,
+    },
+    medicalHistory: {
+      type: String,
+      required: false,
+      trim: true,
+    },
   },
   { timestamps: true }
 );

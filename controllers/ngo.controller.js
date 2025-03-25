@@ -4,6 +4,7 @@ import { ApiResponse } from "../utils/ApiResponse.js";
 import NGO from "../models/ngo.models.js";
 import jwt from "jsonwebtoken";
 import { uploadOnCloudinary } from "../utils/fileUpload.js";
+import { sendOTPEmail } from "../utils/emailService.js";
 
 /**
  * Generate access and refresh tokens for NGO
@@ -100,7 +101,7 @@ const registerNGO = asyncHandler(async (req, res) => {
   await ngo.save();
   
   // TODO: Send verification email with OTP
-  // sendVerificationEmail(ngo.email, otp);
+  await sendOTPEmail(ngo.email, otp);
   
   // Return success response without sensitive information
   const ngoData = await NGO.findById(ngo._id).select("-password -refreshToken -verificationOTP");
@@ -149,45 +150,88 @@ const verifyNGOEmail = asyncHandler(async (req, res) => {
   );
 });
 
-/**
- * Request a new OTP if previous one expired
- */
-const requestNewOTP = asyncHandler(async (req, res) => {
-  const { email } = req.body;
+// /**
+//  * Request a new OTP if previous one expired
+//  */
+// const requestNewOTP = asyncHandler(async (req, res) => {
+//   const { email } = req.body;
   
+//   if (!email) {
+//     throw new ApiError(400, "Email is required");
+//   }
+  
+//   const ngo = await NGO.findOne({ email });
+  
+//   if (!ngo) {
+//     throw new ApiError(404, "NGO not found");
+//   }
+  
+//   if (ngo.isVerified) {
+//     return res.status(200).json(
+//       new ApiResponse(200, {}, "NGO is already verified")
+//     );
+//   }
+  
+//   // Generate new OTP
+//   const otp = Math.floor(100000 + Math.random() * 900000).toString();
+//   const otpExpiry = new Date();
+//   otpExpiry.setHours(otpExpiry.getHours() + 1); // OTP valid for 1 hour
+  
+//   ngo.verificationOTP = {
+//     code: otp,
+//     expiresAt: otpExpiry
+//   };
+  
+//   await ngo.save();
+  
+//   // TODO: Send verification email with OTP
+//   await sendOTPEmail(ngo.email, otp);
+
+  
+//   return res.status(200).json(
+//     new ApiResponse(200, {}, "New OTP sent to your email")
+//   );
+// });
+
+/**
+ * Resend verification email
+ */
+const resendVerificationEmail = asyncHandler(async (req, res) => {
+  const { email } = req.body;
+
   if (!email) {
     throw new ApiError(400, "Email is required");
   }
-  
+
   const ngo = await NGO.findOne({ email });
-  
+
   if (!ngo) {
     throw new ApiError(404, "NGO not found");
   }
-  
+
   if (ngo.isVerified) {
     return res.status(200).json(
       new ApiResponse(200, {}, "NGO is already verified")
     );
   }
-  
+
   // Generate new OTP
   const otp = Math.floor(100000 + Math.random() * 900000).toString();
   const otpExpiry = new Date();
   otpExpiry.setHours(otpExpiry.getHours() + 1); // OTP valid for 1 hour
-  
+
   ngo.verificationOTP = {
     code: otp,
     expiresAt: otpExpiry
   };
-  
+
   await ngo.save();
-  
-  // TODO: Send verification email with OTP
-  // sendVerificationEmail(ngo.email, otp);
-  
+
+  // Send verification email
+  await sendOTPEmail(ngo.email, otp);
+
   return res.status(200).json(
-    new ApiResponse(200, {}, "New OTP sent to your email")
+    new ApiResponse(200, {}, "Verification email resent successfully")
   );
 });
 
@@ -540,7 +584,7 @@ const changePassword = asyncHandler(async (req, res) => {
 export {
   registerNGO,
   verifyNGOEmail,
-  requestNewOTP,
+  resendVerificationEmail,
   loginNGO,
   logoutNGO,
   refreshAccessToken,

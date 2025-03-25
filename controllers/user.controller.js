@@ -570,6 +570,51 @@ const getUserBloodDonationStats = asyncHandler(async (req, res) => {
     );
 });
 
+const updateBloodType = asyncHandler(async (req, res) => {
+  const { bloodType } = req.body;
+
+  const validBloodTypes = ["A+", "A-", "B+", "B-", "AB+", "AB-", "O+", "O-"];
+  if (!bloodType || !validBloodTypes.includes(bloodType)) {
+    throw new ApiError(400, "Invalid or missing blood type");
+  }
+
+  const user = await User.findByIdAndUpdate(
+    req.user._id,
+    { bloodType },
+    { new: true }
+  ).select("-password -refreshToken");
+
+  if (!user) {
+    throw new ApiError(500, "Failed to update blood type");
+  }
+
+  return res
+    .status(200)
+    .json(new ApiResponse(200, { user }, "Blood type updated successfully"));
+});
+
+const updateMedicalHistory = asyncHandler(async (req, res) => {
+  const { medicalHistory } = req.body;
+
+  if (!medicalHistory) {
+    throw new ApiError(400, "Medical history is required");
+  }
+
+  const user = await User.findByIdAndUpdate(
+    req.user._id,
+    { medicalHistory },
+    { new: true }
+  ).select("-password -refreshToken");
+
+  if (!user) {
+    throw new ApiError(500, "Failed to update medical history");
+  }
+
+  return res
+    .status(200)
+    .json(new ApiResponse(200, { user }, "Medical history updated successfully"));
+});
+
 export {
   registerUser,
   loginUser,
@@ -583,4 +628,6 @@ export {
   getUserBloodDonationStats,
   verifyEmail,
   resendEmailOTP,
+  updateBloodType,
+  updateMedicalHistory,
 };

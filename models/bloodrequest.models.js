@@ -9,7 +9,7 @@ const bloodRequestSchema = new mongoose.Schema({
   },
   ngoId: {
     type: mongoose.Schema.Types.ObjectId,
-    ref: 'NGO',
+    ref: 'Ngo',
     required: true
   },
   bloodGroups: [{

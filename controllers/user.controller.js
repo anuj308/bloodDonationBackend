@@ -4,6 +4,7 @@ import { User } from "../models/user.models.js";
 import { ApiResponse } from "../utils/ApiResponse.js";
 import { uploadOnCloudinary } from "../utils/fileUpload.js";
 import jwt from "jsonwebtoken";
+import BloodDonation from "../models/blood.models.js";
 
 const generateAccessAndRefreshToken = async (userId) => {
   try {
@@ -272,6 +273,187 @@ const updateUserAvatar = asyncHandler(async (req, res) => {
     .json(new ApiResponse(200, { user }, "Updated avatar successfully"));
 });
 
+
+const getUserBloodDonationHistory = asyncHandler(async (req, res) => {
+  // Get pagination parameters from query
+  const page = parseInt(req.query.page) || 1;
+  const limit = parseInt(req.query.limit) || 10;
+  const skip = (page - 1) * limit;
+  
+  // Get filter parameters
+  const { status, bloodGroup, sortBy } = req.query;
+  
+  // Build query
+  const query = { userId: req.user._id };
+  
+  // Add filters if provided
+  if (status) {
+    query.status = status;
+  }
+  
+  if (bloodGroup) {
+    query.bloodGroup = bloodGroup;
+  }
+  
+  // Build sort options
+  let sortOptions = {};
+  if (sortBy === 'latest') {
+    sortOptions = { donationDate: -1 };
+  } else if (sortBy === 'oldest') {
+    sortOptions = { donationDate: 1 };
+  } else {
+    // Default sorting
+    sortOptions = { donationDate: -1 };
+  }
+  
+  // Execute query with pagination
+  const donations = await BloodDonation.find(query)
+    .sort(sortOptions)
+    .skip(skip)
+    .limit(limit)
+    .populate({
+      path: 'centerId',
+      select: 'name type location.city location.state'
+    })
+    .populate({
+      path: 'ngoId',
+      select: 'name'
+    })
+    .populate({
+      path: 'currentLocation.entityId',
+      select: 'name'
+    });
+  
+  // Get total count for pagination
+  const totalDonations = await BloodDonation.countDocuments(query);
+  
+  // Calculate statistics
+  const stats = {
+    totalDonations: totalDonations,
+    availableDonations: await BloodDonation.countDocuments({ 
+      userId: req.user._id, 
+      status: 'available' 
+    }),
+    usedDonations: await BloodDonation.countDocuments({ 
+      userId: req.user._id, 
+      status: 'used' 
+    })
+  };
+  
+  return res.status(200).json(
+    new ApiResponse(200, {
+      donations,
+      pagination: {
+        totalDonations,
+        totalPages: Math.ceil(totalDonations / limit),
+        currentPage: page,
+        hasNextPage: page * limit < totalDonations,
+        hasPrevPage: page > 1
+      },
+      stats
+    }, "Blood donation history fetched successfully")
+  );
+});
+
+/**
+ * Get detailed information about a specific blood donation
+ */
+const getBloodDonationDetails = asyncHandler(async (req, res) => {
+  const { donationId } = req.params;
+  
+  if (!donationId) {
+    throw new ApiError(400, "Donation ID is required");
+  }
+  
+  const donation = await BloodDonation.findById(donationId)
+    .populate({
+      path: 'centerId',
+      select: 'name type location.city location.state facilities'
+    })
+    .populate({
+      path: 'ngoId',
+      select: 'name contactPerson'
+    })
+    .populate({
+      path: 'transferHistory.fromId transferHistory.toId currentLocation.entityId',
+      select: 'name type'
+    });
+  
+  if (!donation) {
+    throw new ApiError(404, "Donation not found");
+  }
+  
+  // Verify that the donation belongs to the current user
+  if (donation.userId.toString() !== req.user._id.toString()) {
+    throw new ApiError(403, "You don't have permission to view this donation");
+  }
+  
+  return res.status(200).json(
+    new ApiResponse(200, { donation }, "Blood donation details fetched successfully")
+  );
+});
+
+/**
+ * Get user blood donation statistics
+ */
+const getUserBloodDonationStats = asyncHandler(async (req, res) => {
+  const userId = req.user._id;
+  
+  // Get overall statistics
+  const totalDonations = await BloodDonation.countDocuments({ userId });
+  const totalDonationAmount = await BloodDonation.aggregate([
+    { $match: { userId: mongoose.Types.ObjectId(userId) } },
+    { $group: { _id: null, total: { $sum: "$donationAmount" } } }
+  ]);
+  
+  // Get blood group distribution
+  const bloodGroupStats = await BloodDonation.aggregate([
+    { $match: { userId: mongoose.Types.ObjectId(userId) } },
+    { $group: { _id: "$bloodGroup", count: { $sum: 1 } } },
+    { $sort: { count: -1 } }
+  ]);
+  
+  // Get donation frequency by month/year
+  const donationTimeline = await BloodDonation.aggregate([
+    { $match: { userId: mongoose.Types.ObjectId(userId) } },
+    {
+      $group: {
+        _id: {
+          year: { $year: "$donationDate" },
+          month: { $month: "$donationDate" }
+        },
+        count: { $sum: 1 }
+      }
+    },
+    { $sort: { "_id.year": 1, "_id.month": 1 } }
+  ]);
+  
+  // Format stats
+  const formattedStats = {
+    totalDonations,
+    totalDonationAmount: totalDonationAmount.length > 0 ? totalDonationAmount[0].total : 0,
+    bloodGroupDistribution: bloodGroupStats.map(item => ({
+      bloodGroup: item._id,
+      count: item.count
+    })),
+    donationTimeline: donationTimeline.map(item => ({
+      year: item._id.year,
+      month: item._id.month,
+      count: item.count
+    })),
+    statusCounts: {
+      available: await BloodDonation.countDocuments({ userId, status: 'available' }),
+      used: await BloodDonation.countDocuments({ userId, status: 'used' }),
+      processing: await BloodDonation.countDocuments({ userId, status: 'processing' }),
+      expired: await BloodDonation.countDocuments({ userId, status: 'expired' })
+    }
+  };
+  
+  return res.status(200).json(
+    new ApiResponse(200, formattedStats, "Blood donation statistics fetched successfully")
+  );
+});
+
 export {
   registerUser,
   loginUser,
@@ -281,4 +463,7 @@ export {
   getCurrentUser,
   updateAccountDetails,
   updateUserAvatar,
+  getUserBloodDonationHistory,
+  getBloodDonationDetails,
+  getUserBloodDonationStats
 };

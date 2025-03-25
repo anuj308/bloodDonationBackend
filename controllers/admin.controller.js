@@ -9,6 +9,7 @@ import { Center, BloodBank, DonationCamp } from "../models/center.models.js";
 import BloodDonation from "../models/blood.models.js";
 import BloodRequest from "../models/bloodrequest.models.js";
 import jwt from "jsonwebtoken";
+import Admin from "../models/admin.models.js";
 
 // Admin model reference (you might need to create this model)
 // import Admin from "../models/admin.models.js";

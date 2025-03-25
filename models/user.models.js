@@ -4,14 +4,6 @@ import bcrypt from "bcrypt";
 
 const userSchema = new Schema(
   {
-    userName: {
-      type: String,
-      required: true,
-      unique: true,
-      lowercase: true,
-      trim: true,
-      index: true,
-    },
     email: {
       type: String,
       required: true,
@@ -25,6 +17,14 @@ const userSchema = new Schema(
     //   unique: true,
     //   trim: true,
     // },
+    isEmailVerified: { 
+      type: Boolean,
+      default: false 
+    },
+    emailVerificationOTP: {
+      code: String,
+      expiresAt: Date 
+    },
     fullName: {
       type: String,
       required: true,
@@ -32,10 +32,10 @@ const userSchema = new Schema(
       lowercase: true,
       trim: true,
     },
-    avatar: {
-      type: String, //cloudinary url
-      required: true,
-    },
+    // avatar: {
+    //   type: String, //cloudinary url
+    //   required: true,
+    // },
     bloodDonationHistory: [
       {
         type: Schema.Types.ObjectId,
@@ -90,4 +90,6 @@ userSchema.methods.generateAccessToken = function () {
   );
 };
 
-export const User = mongoose.model("User", userSchema);
+const User = mongoose.model("User", userSchema);
+
+export default User;

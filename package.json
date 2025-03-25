@@ -1,0 +1,19 @@
+{
+  "name": "express-server",
+  "version": "1.0.0",
+  "description": "A simple Express server project structure with controllers, routes, and models.",
+  "main": "src/server.js",
+  "scripts": {
+    "start": "node src/server.js",
+    "dev": "nodemon src/server.js"
+  },
+  "dependencies": {
+    "express": "^4.17.1",
+    "dotenv": "^10.0.0"
+  },
+  "devDependencies": {
+    "nodemon": "^2.0.7"
+  },
+  "author": "",
+  "license": "ISC"
+}

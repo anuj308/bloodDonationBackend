@@ -14,7 +14,7 @@ import {
   respondToConnectionRequest,
   changePassword
 } from '../controllers/ngo.controller.js';
-import { verifyNGO } from '../middleware/auth.middleware.js';
+import { verifyJWT } from '../middleware/auth.middleware.js';
 
 const router = Router();
 
@@ -26,7 +26,7 @@ router.post('/login', loginNGO);
 router.post('/refresh-token', refreshAccessToken);
 
 // Protected routes
-router.use(verifyNGO); // All routes below will require NGO authentication
+router.use(verifyJWT); // Apply verifyJWT middleware to all routes below
 
 router.get('/logout', logoutNGO);
 router.get('/profile', getNGOProfile);

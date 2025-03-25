@@ -16,7 +16,7 @@ import {
   verifyNGO,
   verifyHospital
 } from '../controllers/admin.controller.js';
-import { verifyAdmin } from '../middleware/auth.middleware.js';
+import { verifyJWT } from '../middleware/auth.middleware.js';
 
 const router = Router();
 
@@ -24,7 +24,7 @@ const router = Router();
 router.post('/login', adminLogin);
 
 // Protected routes
-router.use(verifyAdmin); // All routes below will require admin authentication
+router.use(verifyJWT); // Apply verifyJWT middleware to all routes below
 
 router.get('/logout', adminLogout);
 router.get('/dashboard', getDashboardOverview);

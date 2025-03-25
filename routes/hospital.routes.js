@@ -12,7 +12,7 @@ import {
   getBloodRequestHistory,
   connectWithNGO
 } from '../controllers/hospital.controller.js';
-import { verifyHospital } from '../middleware/auth.middleware.js';
+import { verifyJWT } from '../middleware/auth.middleware.js';
 
 const router = Router();
 
@@ -22,7 +22,7 @@ router.post('/verify-email', verifyHospitalEmail);
 router.post('/login', loginHospital);
 
 // Protected routes
-router.use(verifyHospital); // All routes below will require hospital authentication
+router.use(verifyJWT); // Apply verifyJWT middleware to all routes below
 
 router.get('/logout', logoutHospital);
 router.get('/profile', getHospitalProfile);

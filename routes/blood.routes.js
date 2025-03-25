@@ -7,12 +7,12 @@ import {
   getBloodDonationDetails,
   getExpiringBloodDonations
 } from '../controllers/blood.controller.js';
-import { verifyNGO } from '../middleware/auth.middleware.js';
+import { verifyJWT } from '../middleware/auth.middleware.js';
 
 const router = Router();
 
-// All blood-related routes require NGO authentication
-router.use(verifyNGO);
+// All blood-related routes require authentication
+router.use(verifyJWT);
 
 router.post('/register-donation', registerBloodDonation);
 router.get('/donations', getNGOBloodDonations);

@@ -13,15 +13,17 @@ import { verifyJWT } from "../middleware/auth.middleware.js";
 
 const router = Router();
 
-router.route("/register").post(registerUser);
+// Public routes
+router.post("/register", registerUser);
+router.post("/login", loginUser);
+router.post("/refreshToken", refreshAccessToken);
 
-router.route("/login").post(loginUser);
+// Protected routes
+router.use(verifyJWT); // Apply verifyJWT middleware to all routes below
 
-// secure routes
-router.route("/logout").post(verifyJWT, logoutUser);
-router.route("/current-user").get(verifyJWT, getCurrentUser);
-router.route("/change-password").post(verifyJWT, changeCurrentPassword);
-router.route("/refreshToken").post(refreshAccessToken);
-router.route("/update-account").patch(verifyJWT, updateAccountDetails);
+router.post("/logout", logoutUser);
+router.get("/current-user", getCurrentUser);
+router.post("/change-password", changeCurrentPassword);
+router.patch("/update-account", updateAccountDetails);
 
 export default router;

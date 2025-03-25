@@ -7,18 +7,18 @@ import {
   getHospitalBloodRequests,
   confirmBloodDelivery
 } from '../controllers/bloodRequest.controller.js';
-import { verifyNGO, verifyHospital } from '../middleware/auth.middleware.js';
+import { verifyJWT } from '../middleware/auth.middleware.js';
 
 const router = Router();
 
-// Routes for hospitals
-router.post('/create', verifyHospital, createBloodRequest);
-router.get('/hospital', verifyHospital, getHospitalBloodRequests);
-router.post('/confirm-delivery/:requestId', verifyHospital, confirmBloodDelivery);
+router.use(verifyJWT); // All routes require authentication
 
-// Routes for NGOs
-router.get('/ngo', verifyNGO, getNGOBloodRequests);
-router.patch('/:requestId/status', verifyNGO, updateBloodRequestStatus);
-router.post('/transfer/:donationId', verifyNGO, transferBloodUnit);
+// Routes for hospitals and NGOs - the verifyJWT middleware will handle role-based access
+router.post('/create', createBloodRequest);
+router.get('/hospital', getHospitalBloodRequests);
+router.post('/confirm-delivery/:requestId', confirmBloodDelivery);
+router.get('/ngo', getNGOBloodRequests);
+router.patch('/:requestId/status', updateBloodRequestStatus);
+router.post('/transfer/:donationId', transferBloodUnit);
 
 export default router;

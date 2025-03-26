@@ -11,12 +11,10 @@ const userSchema = new Schema(
       lowercase: true,
       trim: true,
     },
-    // phoneNumber: {
-    //   type: Number,
-    //   required: [true, "Phone number is required"],
-    //   unique: true,
-    //   trim: true,
-    // },
+    dateOfBirth: {
+      type: Date,
+      required: [true, "Date of birth is required"],
+    },
     isEmailVerified: { 
       type: Boolean,
       default: false 
@@ -28,7 +26,6 @@ const userSchema = new Schema(
     fullName: {
       type: String,
       required: true,
-      unique: true,
       lowercase: true,
       trim: true,
     },

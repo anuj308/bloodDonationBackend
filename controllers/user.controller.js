@@ -27,10 +27,60 @@ const generateAccessAndRefreshToken = async (userId) => {
   }
 };
 const registerUser = asyncHandler(async (req, res) => {
-  const { fullName, email, password } = req.body;
+  const { 
+    fullName, 
+    email, 
+    password, 
+    dateOfBirth,
+    bloodType,
+    address
+  } = req.body;
 
   if ([fullName, email, password].some((fields) => fields?.trim() === "")) {
     throw new ApiError(400, "all field are required");
+  }
+
+  if (!dateOfBirth) {
+    throw new ApiError(400, "Date of birth is required");
+  }
+
+  // Validate date format and check if it's a valid date
+  const dob = new Date(dateOfBirth);
+  if (isNaN(dob.getTime())) {
+    throw new ApiError(400, "Invalid date format. Please use YYYY-MM-DD format");
+  }
+
+  // Check if user is at least 18 years old
+  const today = new Date();
+  const age = today.getFullYear() - dob.getFullYear();
+  const monthDiff = today.getMonth() - dob.getMonth();
+  if (age < 18 || (age === 18 && monthDiff < 0)) {
+    throw new ApiError(400, "You must be at least 18 years old to register");
+  }
+
+  // Validate blood type if provided
+  if (bloodType) {
+    const validBloodTypes = ["A+", "A-", "B+", "B-", "AB+", "AB-", "O+", "O-"];
+    if (!validBloodTypes.includes(bloodType)) {
+      throw new ApiError(400, "Invalid blood type. Must be one of: " + validBloodTypes.join(", "));
+    }
+  }
+
+  // Validate address if provided
+  if (address) {
+    if (!address.city || !address.pinCode) {
+      throw new ApiError(400, "City and PIN code are required in address");
+    }
+
+    // If coordinates are provided, validate them
+    if (address.coordinates) {
+      if (!Array.isArray(address.coordinates) || 
+          address.coordinates.length !== 2 ||
+          typeof address.coordinates[0] !== "number" || 
+          typeof address.coordinates[1] !== "number") {
+        throw new ApiError(400, "Coordinates must be an array of [longitude, latitude]");
+      }
+    }
   }
 
   const existedUser = await User.findOne({ email });
@@ -39,14 +89,26 @@ const registerUser = asyncHandler(async (req, res) => {
     throw new ApiError(409, "User with email and userName already exists");
   }
 
-  // Generate OTP and set expiry (10 minutes from now
+  // Generate OTP and set expiry (10 minutes from now)
   const otp = generateOTP();
   const otpExpiry = new Date(Date.now() + 10 * 60 * 1000);
+
+  // Format address with location if coordinates are provided
+  const formattedAddress = address ? {
+    ...address,
+    location: address.coordinates ? {
+      type: "Point",
+      coordinates: address.coordinates
+    } : undefined
+  } : undefined;
 
   const user = await User.create({
     fullName,
     email,
     password,
+    dateOfBirth: dob,
+    bloodType,
+    address: formattedAddress,
     isEmailVerified: false,
     emailVerificationOTP: { code: otp, expiresAt: otpExpiry },
   });

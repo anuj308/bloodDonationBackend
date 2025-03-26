@@ -12,7 +12,11 @@ import {
   getUserBloodDonationHistory,
   getUserBloodDonationStats,
   updateBloodType,
-  updateMedicalHistory
+  updateMedicalHistory,
+  getBloodDonationDetailsByUser,
+  findNearbyNGOsForDonation,
+  updateUserLocation,
+  getAllBloodDonationCamps
 } from "../controllers/user.controller.js";
 import { upload } from "../middleware/multer.middleware.js";
 import { verifyJWT } from "../middleware/auth.middleware.js";
@@ -38,5 +42,11 @@ router.route("/update-blood-type").post(updateBloodType);
 router.route("/update-medical-history").post(updateMedicalHistory);
 router.get("/blood-donation-history", getUserBloodDonationHistory);
 router.get("/blood-donation-stats", getUserBloodDonationStats);
+router.get("/blood-donation-details/:donationId", getBloodDonationDetailsByUser);
+router.get('/nearby-ngos', verifyJWT, findNearbyNGOsForDonation);
+router.patch("/update-location", verifyJWT, updateUserLocation);
+
+// Blood donation camps routes
+router.get("/donation-camps", verifyJWT, getAllBloodDonationCamps);
 
 export default router;

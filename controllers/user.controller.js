@@ -1,6 +1,7 @@
 import { asyncHandler } from "../utils/asyncHandler.js";
 import { ApiError } from "../utils/ApiError.js";
 import User from "../models/user.models.js";
+import { Center } from "../models/center.models.js";
 import { ApiResponse } from "../utils/ApiResponse.js";
 import { uploadOnCloudinary } from "../utils/fileUpload.js";
 import jwt from "jsonwebtoken";
@@ -449,49 +450,49 @@ const getUserBloodDonationHistory = asyncHandler(async (req, res) => {
   );
 });
 
-// /**
-//  * Get detailed information about a specific blood donation
-//  */
-// const getBloodDonationDetails = asyncHandler(async (req, res) => {
-//   const { donationId } = req.params;
+/**
+ * Get detailed information about a specific blood donation
+ */
+const getBloodDonationDetailsByUser = asyncHandler(async (req, res) => {
+  const { donationId } = req.params;
 
-//   if (!donationId) {
-//     throw new ApiError(400, "Donation ID is required");
-//   }
+  if (!donationId) {
+    throw new ApiError(400, "Donation ID is required");
+  }
 
-//   const donation = await BloodDonation.findById(donationId)
-//     .populate({
-//       path: "centerId",
-//       select: "name type location.city location.state facilities",
-//     })
-//     .populate({
-//       path: "ngoId",
-//       select: "name contactPerson",
-//     })
-//     .populate({
-//       path: "transferHistory.fromId transferHistory.toId currentLocation.entityId",
-//       select: "name type",
-//     });
+  const donation = await BloodDonation.findById(donationId)
+    .populate({
+      path: "centerId",
+      select: "name type location.city location.state facilities",
+    })
+    .populate({
+      path: "ngoId",
+      select: "name contactPerson",
+    })
+    .populate({
+      path: "transferHistory.fromId transferHistory.toId currentLocation.entityId",
+      select: "name type",
+    });
 
-//   if (!donation) {
-//     throw new ApiError(404, "Donation not found");
-//   }
+  if (!donation) {
+    throw new ApiError(404, "Donation not found");
+  }
 
-//   // Verify that the donation belongs to the current user
-//   if (donation.userId.toString() !== req.user._id.toString()) {
-//     throw new ApiError(403, "You don't have permission to view this donation");
-//   }
+  // Verify that the donation belongs to the current user
+  if (donation.userId.toString() !== req.user._id.toString()) {
+    throw new ApiError(403, "You don't have permission to view this donation");
+  }
 
-//   return res
-//     .status(200)
-//     .json(
-//       new ApiResponse(
-//         200,
-//         { donation },
-//         "Blood donation details fetched successfully"
-//       )
-//     );
-// });
+  return res
+    .status(200)
+    .json(
+      new ApiResponse(
+        200,
+        { donation },
+        "Blood donation details fetched successfully"
+      )
+    );
+});
 
 /**
  * Get user blood donation statistics
@@ -612,7 +613,221 @@ const updateMedicalHistory = asyncHandler(async (req, res) => {
 
   return res
     .status(200)
-    .json(new ApiResponse(200, { user }, "Medical history updated successfully"));
+    .json(
+      new ApiResponse(200, { user }, "Medical history updated successfully")
+    );
+});
+
+/**
+ * Search for nearby blood donation centers where users can donate blood
+ */
+const findNearbyNGOsForDonation = asyncHandler(async (req, res) => {
+  const { distance = 10, bloodGroup } = req.query; // Distance in kilometers
+
+  // Get user's location from their profile
+  const user = await User.findById(req.user._id);
+  if (!user?.address?.location?.coordinates) {
+    throw new ApiError(
+      400,
+      "User location not set. Please update your profile with your address."
+    );
+  }
+
+  // Find blood donation centers using geospatial query
+  const nearbyCenters = await Center.find({
+    'location.coordinates': {
+      $near: {
+        $geometry: {
+          type: 'Point',
+          coordinates: user.address.location.coordinates
+        },
+        $maxDistance: distance * 1000 // Convert to meters
+      }
+    },
+    type: 'BloodBank', // Match the enum value from the model
+    status: 'Active'
+  }).select("name type location facilities timing.operationalHours contactPerson");
+
+  // Enhance center data with blood donation information
+  const centersWithDonationInfo = await Promise.all(nearbyCenters.map(async (center) => {
+    const centerData = center.toObject();
+
+    // Get number of donations processed by this center
+    const donationCount = await BloodDonation.countDocuments({
+      centerId: center._id,
+      status: { $in: ['available', 'used'] }
+    });
+
+    return {
+      ...centerData,
+      donationMetrics: {
+        totalDonations: donationCount
+      },
+      distance: calculateDistance(
+        user.address.location.coordinates,
+        center.location.coordinates.coordinates
+      )
+    };
+  }));
+
+  // Sort by distance
+  centersWithDonationInfo.sort((a, b) => a.distance - b.distance);
+
+  return res.status(200).json(
+    new ApiResponse(200, centersWithDonationInfo, "Nearby blood donation centers fetched successfully")
+  );
+});
+
+// Utility function to calculate distance between two coordinates
+function calculateDistance(coords1, coords2) {
+  const R = 6371; // Earth's radius in km
+  const dLat = deg2rad(coords2[1] - coords1[1]);
+  const dLon = deg2rad(coords2[0] - coords1[0]); // Fixed coords0 to coords1
+  const a =
+    Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+    Math.cos(deg2rad(coords1[1])) *
+      Math.cos(deg2rad(coords2[1])) *
+      Math.sin(dLon / 2) *
+      Math.sin(dLon / 2);
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+  return R * c; // Distance in km
+}
+
+function deg2rad(deg) {
+  return deg * (Math.PI / 180);
+}
+
+/**
+ * Update user's location and address
+ */
+const updateUserLocation = asyncHandler(async (req, res) => {
+  const { street, city, state, pinCode, coordinates } = req.body;
+
+  if (
+    !city ||
+    !pinCode ||
+    !coordinates ||
+    !Array.isArray(coordinates) ||
+    coordinates.length !== 2
+  ) {
+    throw new ApiError(
+      400,
+      "City, pinCode and coordinates [longitude, latitude] are required"
+    );
+  }
+
+  const [longitude, latitude] = coordinates;
+  if (typeof longitude !== "number" || typeof latitude !== "number") {
+    throw new ApiError(400, "Coordinates must be numbers");
+  }
+
+  const user = await User.findByIdAndUpdate(
+    req.user._id,
+    {
+      address: {
+        street,
+        city,
+        state,
+        pinCode,
+        location: {
+          type: "Point",
+          coordinates: [longitude, latitude],
+        },
+      },
+    },
+    { new: true }
+  ).select("-password -refreshToken");
+
+  return res
+    .status(200)
+    .json(new ApiResponse(200, { user }, "Location updated successfully"));
+});
+
+/**
+ * Get all blood donation camps
+ */
+const getAllBloodDonationCamps = asyncHandler(async (req, res) => {
+  const { page = 1, limit = 10, status, date, city } = req.query;
+  const skip = (page - 1) * limit;
+
+  // Build query
+  const query = {
+    type: 'DonationCamp',
+    status: status || 'Active'
+  };
+
+  // // Add date filter if provided
+  // if (date) {
+  //   const searchDate = new Date(date);
+  //   query['timing.campDate'] = {
+  //     $gte: new Date(searchDate.setHours(0, 0, 0)),
+  //     $lte: new Date(searchDate.setHours(23, 59, 59))
+  //   };
+  // }
+
+  // Add city filter if provided
+  if (city) {
+    query['location.city'] = new RegExp(city, 'i');
+  }
+
+  // Get user's location for distance calculation
+  const user = await User.findById(req.user._id);
+  const userCoordinates = user?.address?.location?.coordinates;
+
+  // Execute query with pagination
+  const camps = await Center.find(query)
+    .sort({ 'timing.campDate': 1 })
+    .skip(skip)
+    .limit(limit)
+    .select('name location facilities timing contactPerson');
+
+  // Get total count for pagination
+  const totalCamps = await Center.countDocuments(query);
+
+  // Add distance from user if user location is available
+  const campsWithDistance = camps.map(camp => {
+    const campData = camp.toObject();
+    if (userCoordinates && camp.location?.coordinates?.coordinates) {
+      campData.distance = calculateDistance(
+        userCoordinates,
+        camp.location.coordinates.coordinates
+      );
+    }
+    return campData;
+  });
+
+  // Sort by distance if user location is available
+  if (userCoordinates) {
+    campsWithDistance.sort((a, b) => (a.distance || Infinity) - (b.distance || Infinity));
+  }
+
+  // Get upcoming camps count
+  const upcomingCampsCount = await Center.countDocuments({
+    type: 'DonationCamp',
+    status: 'Active',
+    'timing.campDate': { $gt: new Date() }
+  });
+
+  return res.status(200).json(
+    new ApiResponse(
+      200,
+      {
+        camps: campsWithDistance,
+        pagination: {
+          totalCamps,
+          totalPages: Math.ceil(totalCamps / limit),
+          currentPage: parseInt(page),
+          hasNextPage: skip + camps.length < totalCamps,
+          hasPrevPage: page > 1
+        },
+        stats: {
+          totalCamps,
+          upcomingCamps: upcomingCampsCount
+        }
+      },
+      "Blood donation camps fetched successfully"
+    )
+  );
 });
 
 export {
@@ -624,10 +839,14 @@ export {
   getCurrentUser,
   updateAccountDetails,
   updateUserAvatar,
+  getBloodDonationDetailsByUser,
   getUserBloodDonationHistory,
   getUserBloodDonationStats,
   verifyEmail,
   resendEmailOTP,
   updateBloodType,
   updateMedicalHistory,
+  findNearbyNGOsForDonation,
+  updateUserLocation,
+  getAllBloodDonationCamps // Add the new controller to exports
 };

@@ -60,6 +60,34 @@ const userSchema = new Schema(
       required: false,
       trim: true,
     },
+    // Adding address and location fields
+    address: {
+      street: String,
+      city: {
+        type: String,
+        required: true
+      },
+      state: String,
+      pinCode: {
+        type: String,
+        required: true
+      },
+      country: {
+        type: String,
+        default: 'India'
+      },
+      location: {
+        type: {
+          type: String,
+          enum: ['Point'],
+          default: 'Point'
+        },
+        coordinates: {
+          type: [Number], // [longitude, latitude]
+          required: true
+        }
+      }
+    },
   },
   { timestamps: true }
 );

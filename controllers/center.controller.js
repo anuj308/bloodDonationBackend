@@ -28,7 +28,8 @@ const addCenter = asyncHandler(async (req, res) => {
     licenseExpiry,
     storageCapacity,
     certifications,
-    equipments
+    equipments,
+    status
   } = req.body;
 
   // Validate required fields
@@ -42,6 +43,7 @@ const addCenter = asyncHandler(async (req, res) => {
     type,
     description,
     ngoId: req.ngo._id, // From JWT auth
+    status,
     contactPerson,
     location,
     timing,

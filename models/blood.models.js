@@ -58,7 +58,7 @@ const bloodDonationSchema = new mongoose.Schema({
     temperature: Number
   },
   // Status of donation (processing, available, used)
-  status: {
+  status: { 
     type: String,
     enum: ['processing', 'available', 'assigned', 'used', 'expired', 'discarded'],
     default: 'processing'

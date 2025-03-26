@@ -1,17 +1,20 @@
 import { Router } from 'express';
-import { verifyJWT } from '../middleware/auth.middleware.js';
 import {
   addCenter,
-  deleteCenter
+  deleteCenter,
+  getCenterById,
+  getAllCenters
 } from '../controllers/center.controller.js';
+import { verifyJWT } from '../middleware/auth.middleware.js';
 
 const router = Router();
 
-// All center-related routes require authentication
+// All routes require authentication
 router.use(verifyJWT);
 
-// Center management routes
-router.post('/add', addCenter);
+router.post('/', addCenter);
 router.delete('/:centerId', deleteCenter);
+router.get('/:centerId', getCenterById);
+router.get('/', getAllCenters);
 
 export default router;

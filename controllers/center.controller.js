@@ -151,7 +151,74 @@ const deleteCenter = asyncHandler(async (req, res) => {
   );
 });
 
+/**
+ * Get a center by ID
+ */
+const getCenterById = asyncHandler(async (req, res) => {
+  const { centerId } = req.params;
+
+  if (!mongoose.Types.ObjectId.isValid(centerId)) {
+    throw new ApiError(400, "Invalid center ID format");
+  }
+
+  const center = await Center.findOne({
+    _id: centerId,
+    ngoId: req.ngo._id
+  });
+
+  if (!center) {
+    throw new ApiError(404, "Center not found or you don't have permission to view it");
+  }
+
+  return res.status(200).json(
+    new ApiResponse(200, center, "Center fetched successfully")
+  );
+});
+
+/**
+ * Get all centers for an NGO with optional filtering
+ */
+const getAllCenters = asyncHandler(async (req, res) => {
+  const { type, city, page = 1, limit = 10 } = req.query;
+  const skip = (page - 1) * limit;
+
+  // Build query
+  const query = { ngoId: req.ngo._id };
+  
+  if (type) {
+    query.type = type;
+  }
+  
+  if (city) {
+    query['location.city'] = { $regex: city, $options: 'i' };
+  }
+
+  // Execute query with pagination
+  const centers = await Center.find(query)
+    .sort({ createdAt: -1 })
+    .skip(skip)
+    .limit(limit);
+
+  // Get total count for pagination
+  const totalCenters = await Center.countDocuments(query);
+
+  return res.status(200).json(
+    new ApiResponse(200, {
+      centers,
+      pagination: {
+        totalCenters,
+        totalPages: Math.ceil(totalCenters / limit),
+        currentPage: parseInt(page),
+        hasNextPage: skip + centers.length < totalCenters,
+        hasPrevPage: page > 1
+      }
+    }, "Centers fetched successfully")
+  );
+});
+
 export {
   addCenter,
-  deleteCenter
+  deleteCenter,
+  getCenterById,
+  getAllCenters
 };

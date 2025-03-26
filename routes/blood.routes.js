@@ -2,7 +2,7 @@ import { Router } from 'express';
 import {
   registerBloodDonation,
   getNGOBloodDonations,
-  updateBloodDonationStatus,
+  updateBloodDonationStatus, 
   getNGOBloodInventory,
   getBloodDonationDetails,
   getExpiringBloodDonations
@@ -15,7 +15,7 @@ const router = Router();
 router.use(verifyJWT);
 
 router.post('/register-donation', registerBloodDonation);
-router.get('/donations', getNGOBloodDonations);
+router.get('/donations', getNGOBloodDonations); 
 router.patch('/donation/:donationId/status', updateBloodDonationStatus);
 router.get('/inventory', getNGOBloodInventory);
 router.get('/donation/:donationId', getBloodDonationDetails);

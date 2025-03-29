@@ -1,5 +1,5 @@
 import mongoose from 'mongoose';
-import bcrypt from 'mongoose-bcrypt'; // For password hashing
+import bcrypt from 'bcryptjs';
 
 const hospitalSchema = new mongoose.Schema({
   // Basic hospital information
@@ -19,8 +19,7 @@ const hospitalSchema = new mongoose.Schema({
   password: {
     type: String,
     required: [true, 'Password is required'],
-    minlength: [8, 'Password must be at least 8 characters long'],
-    bcrypt: true // This will automatically hash the password
+    minlength: [8, 'Password must be at least 8 characters long']
   },
   isVerified: {
     type: Boolean,
@@ -122,9 +121,6 @@ const hospitalSchema = new mongoose.Schema({
 hospitalSchema.index({ 'address.city': 1, 'address.pinCode': 1 });
 hospitalSchema.index({ 'address.location': '2dsphere' });
 
-// Plugin for password hashing
-hospitalSchema.plugin(bcrypt);
-
 // Define virtual for pending blood requests
 hospitalSchema.virtual('pendingRequests', {
   ref: 'BloodRequest',
@@ -143,6 +139,15 @@ hospitalSchema.methods.findNearbyNGOs = function(maxDistance = 10000) { // Defau
       }
     }
   });
+};
+
+hospitalSchema.pre('save', async function (next) {
+  if (!this.isModified('password')) return next();
+  this.password = await bcrypt.hash(this.password, 10);
+  next();
+});
+hospitalSchema.methods.comparePassword = async function (candidatePassword) {
+  return await bcrypt.compare(candidatePassword, this.password);
 };
 
 // Create the model

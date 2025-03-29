@@ -1,5 +1,5 @@
 import mongoose from 'mongoose';
-import bcrypt from 'mongoose-bcrypt';
+import bcrypt from 'bcryptjs';
 
 const ngoSchema = new mongoose.Schema({
   // Basic NGO Information
@@ -19,8 +19,7 @@ const ngoSchema = new mongoose.Schema({
   password: {
     type: String,
     required: [true, 'Password is required'],
-    minlength: [8, 'Password must be at least 8 characters long'],
-    bcrypt: true
+    minlength: [8, 'Password must be at least 8 characters long']
   },
   
   // Verification
@@ -170,9 +169,6 @@ const ngoSchema = new mongoose.Schema({
 ngoSchema.index({ 'address.city': 1, 'address.pinCode': 1 });
 ngoSchema.index({ 'address.location': '2dsphere' });
 
-// Plugin for password hashing
-ngoSchema.plugin(bcrypt);
-
 // Define virtuals for blood camps
 ngoSchema.virtual('upcomingCamps', {
   ref: 'DonationCamp',
@@ -216,6 +212,15 @@ ngoSchema.methods.findNearbyHospitals = function(maxDistance = 10000) { // Defau
       }
     }
   });
+};
+
+ngoSchema.pre('save', async function (next) {
+  if (!this.isModified('password')) return next();
+  this.password = await bcrypt.hash(this.password, 10);
+  next();
+});
+ngoSchema.methods.comparePassword = async function (candidatePassword) {
+  return await bcrypt.compare(candidatePassword, this.password);
 };
 
 // Create the model
